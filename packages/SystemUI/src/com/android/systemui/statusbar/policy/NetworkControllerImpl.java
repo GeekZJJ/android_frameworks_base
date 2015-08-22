@@ -611,13 +611,22 @@ public class NetworkControllerImpl extends BroadcastReceiver
      */
     private void pushConnectivityToSignals() {
         // We want to update all the icons, all at once, for any condition change
+        boolean mShowExclamationMarks = Settings.System.getInt(mContext.getContentResolver(), "statusbar_exclamation_marks", 1) == 1;
         for (MobileSignalController mobileSignalController : mMobileSignalControllers.values()) {
-            mobileSignalController.setInetCondition(
+            if (mShowExclamationMarks) {
+                 mobileSignalController.setInetCondition(
                     mInetCondition ? 1 : 0,
                     mValidatedTransports.get(mobileSignalController.getTransportType()) ? 1 : 0);
+            } else {
+                 mobileSignalController.setInetCondition(1, 1);
+            }
         }
-        mWifiSignalController.setInetCondition(
+        if (mShowExclamationMarks) {
+            mWifiSignalController.setInetCondition(
                 mValidatedTransports.get(mWifiSignalController.getTransportType()) ? 1 : 0);
+        } else {
+            mWifiSignalController.setInetCondition(1);
+        }
     }
 
     /**
