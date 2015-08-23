@@ -3357,6 +3357,11 @@ public final class Settings {
         public static final String INCREASING_RING_RAMP_UP_TIME = "increasing_ring_ramp_up_time";
 
         /**
+         * @hide
+         */
+        public static final String SHOW_SU_ICON = "show_su_icon";
+
+        /**
          * I am the lolrus.
          * <p>
          * Nonzero values indicate that the user has a bukkit.
