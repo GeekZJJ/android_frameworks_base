@@ -22,6 +22,7 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.os.Build;
+import android.provider.Settings;
 
 /**
  * Allows components to query for various configuration policy decisions
@@ -43,7 +44,13 @@ public class ActionBarPolicy {
     }
 
     public boolean showsOverflowMenuButton() {
-        return true;
+        if (Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.UI_FORCE_HIDE_OVERFLOW_BUTTON, 0) == 1) {
+            return Settings.System.getInt(mContext.getContentResolver(),
+                    Settings.System.DEV_FORCE_SHOW_NAVBAR, 0) == 1;
+        } else {
+            return true;
+        }
     }
 
     public int getEmbeddedMenuWidthLimit() {

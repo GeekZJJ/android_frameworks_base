@@ -3273,6 +3273,14 @@ public final class Settings {
         public static final String KEY_MENU_ACTION = "key_menu_action";
 
         /**
+         * Control the display of the action overflow button within app UI.
+         * 0 = use system default
+         * 1 = force hide
+         * @hide
+         */
+        public static final String UI_FORCE_HIDE_OVERFLOW_BUTTON = "ui_force_hide_overflow_button";
+
+        /**
          * Action to perform when the menu key is long-pressed.
          * (Default is 0 on devices with a search key, 3 on devices without)
          * (See KEY_HOME_LONG_PRESS_ACTION for valid values)
