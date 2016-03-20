@@ -542,54 +542,59 @@ public class TaskStackView extends FrameLayout implements TaskStack.TaskStackCal
         tv.dismissTask(0L);
     }
 
+    private boolean dismissAll() {
+        return Settings.System.getInt(mContext.getContentResolver(),
+            Settings.System.RECENTS_CLEAR_ALL_DISMISS_ALL, 1) == 1;
+    }
+
     /** Resets the focused task. */
-    void resetFocusedTask() {
-        if ((0 <= mFocusedTaskIndex) && (mFocusedTaskIndex < mStack.getTaskCount())) {
-            Task t = mStack.getTasks().get(mFocusedTaskIndex);
-            TaskView tv = getChildViewForTask(t);
-            if (tv != null) {
-                tv.unsetFocusedTask();
-            }
-        }
-        mFocusedTaskIndex = -1;
-    }
-
-    public void dismissAllTasks() {
-        final ArrayList<Task> tasks = new ArrayList<Task>();
-        tasks.addAll(mStack.getTasks());
-
-        // Remove visible TaskViews
-        long dismissDelay = 0;
-        int childCount = getChildCount();
-        if (childCount > 0) {
-            int delay = mConfig.taskViewRemoveAnimDuration / childCount;
-            for (int i = 0; i < childCount; i++) {
-                TaskView tv = (TaskView) getChildAt(i);
-                tasks.remove(tv.getTask());
-                tv.dismissTask(dismissDelay);
-                dismissDelay += delay;
-            }
-        }
-
-        // Remove any other Tasks
-        for (Task t : tasks) {
-            if (mStack.getTasks().contains(t)) {
-                mStack.removeTask(t);
-            }
-        }
-
-        // removeAllUserTask() can take upwards of two seconds to execute so post
-        // a delayed runnable to run this code once we are done animating
-        postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                // And remove all the excluded or all the other tasks
-                SystemServicesProxy ssp = RecentsTaskLoader.getInstance().getSystemServicesProxy();
-                ssp.removeAllUserTask(UserHandle.myUserId());
-            }
-        }, mConfig.taskViewRemoveAnimDuration);
-    }
-
+     void resetFocusedTask() {
+         if ((0 <= mFocusedTaskIndex) && (mFocusedTaskIndex < mStack.getTaskCount())) {
+             Task t = mStack.getTasks().get(mFocusedTaskIndex);
+             TaskView tv = getChildViewForTask(t);
+             if (tv != null) {
+                 tv.unsetFocusedTask();
+             }
+         }
+         mFocusedTaskIndex = -1;
+     }
+ 
+     public void dismissAllTasks() {
+         post(new Runnable() {
+             @Override
+             public void run() {
+                 ArrayList<Task> tasks = new ArrayList<Task>();
+                 tasks.addAll(mStack.getTasks());
+ 
+                 // Remove visible TaskViews
+                 long dismissDelay = 0;
+                 int childCount = getChildCount();
+                if (!dismissAll() && childCount > 1) childCount--;
+                 int delay = mConfig.taskViewRemoveAnimDuration / childCount;
+                 for (int i = 0; i < childCount; i++) {
+                     TaskView tv = (TaskView) getChildAt(i);
+                     tasks.remove(tv.getTask());
+                     tv.dismissTask(dismissDelay);
+                     dismissDelay += delay;
+                 }
+ 
+                 int size = tasks.size();
+                 // Remove any other Tasks
+                 for (int i = 0; i < size; i++) {
+                     Task t = tasks.get(i);
+                     if (mStack.getTasks().contains(t)) {
+                         mStack.removeTask(t);
+                     }
+                 }
+ 
+                 // And remove all the excluded or all the other tasks
+                 SystemServicesProxy ssp = RecentsTaskLoader.getInstance().getSystemServicesProxy();
+                if (size > 0) {
+                    ssp.removeAllUserTask(UserHandle.myUserId());
+                }
+             }
+         });
+     }
     @Override
     public void onInitializeAccessibilityEvent(AccessibilityEvent event) {
         super.onInitializeAccessibilityEvent(event);
