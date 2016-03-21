@@ -114,6 +114,7 @@
   <string name="quick_settings_lockscreen_label">锁屏</string>
   <string name="quick_settings_lockscreen_label_enforced">强制锁屏</string>
   <string name="quick_settings_network_adb_label">网络 ADB 调试</string>
+  <string name="quick_settings_volume_panel_label">音量面板</string> 
   <string name="quick_settings_lte_label">LTE</string>
   <string name="quick_settings_screen_timeout_detail_title">屏幕超时</string>
   <string name="quick_settings_usb_tether_label">USB 共享网络</string>
