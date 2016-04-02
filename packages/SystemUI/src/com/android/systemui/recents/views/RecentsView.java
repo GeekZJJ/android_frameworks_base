@@ -387,13 +387,14 @@ public class RecentsView extends FrameLayout implements TaskStackView.TaskStackV
     }
 
     public void noUserInteraction() {
-        if (mClearRecents != null) {
-            mClearRecents.setVisibility(View.VISIBLE);
+        if (mFloatingButton != null) {
+            mFloatingButton.setVisibility(View.VISIBLE);
         }
     }
 
     public void startFABanimation() {
         // Animate the action button in
+        if (mFloatingButton == null || mFloatingButton.getAlpha() == 1f) return;
         mFloatingButton = ((View)getParent()).findViewById(R.id.floating_action_button);
         mFloatingButton.animate().alpha(1f)
                 .setStartDelay(mConfig.taskBarEnterAnimDelay)
@@ -404,6 +405,7 @@ public class RecentsView extends FrameLayout implements TaskStackView.TaskStackV
     }
 
     public void endFABanimation() {
+        if (mFloatingButton == null || mFloatingButton.getAlpha() == 0f) return;
         // Animate the action button away
         mFloatingButton = ((View)getParent()).findViewById(R.id.floating_action_button);
         mFloatingButton.animate().alpha(0f)

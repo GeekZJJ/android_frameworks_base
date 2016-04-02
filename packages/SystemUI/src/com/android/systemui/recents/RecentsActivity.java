@@ -50,6 +50,7 @@ import com.android.systemui.recents.model.TaskStack;
 import com.android.systemui.recents.views.DebugOverlayView;
 import com.android.systemui.recents.views.RecentsView;
 import com.android.systemui.recents.views.SystemBarScrimViews;
+import com.android.systemui.recents.views.TaskStackView;
 import com.android.systemui.recents.views.ViewAnimation;
 import com.android.systemui.statusbar.phone.PhoneStatusBar;
 import com.android.systemui.SystemUIApplication;
@@ -158,6 +159,8 @@ public class RecentsActivity extends Activity implements RecentsView.RecentsView
                 // Notify the fallback receiver that we have successfully got the broadcast
                 // See AlternateRecentsComponent.onAnimationStarted()
                 setResultCode(Activity.RESULT_OK);
+            } else if (action.equals(AlternateRecentsComponent.ACTION_FLOATING_BUTTON_REFRESH)) {
+                setFloatingActionButtonVisibility(false);
             }
         }
     };
@@ -265,7 +268,6 @@ public class RecentsActivity extends Activity implements RecentsView.RecentsView
                 mEmptyView.setVisibility(View.GONE);
                 mEmptyView.setOnClickListener(null);
             }
-            findViewById(R.id.floating_action_button).setVisibility(View.VISIBLE);
             boolean showSearchBar = Settings.System.getInt(getContentResolver(),
                        Settings.System.RECENTS_SHOW_SEARCH_BAR, 1) == 1;
             if (mRecentsView.hasSearchBar()) {
@@ -479,6 +481,7 @@ public class RecentsActivity extends Activity implements RecentsView.RecentsView
         filter.addAction(AlternateRecentsComponent.ACTION_HIDE_RECENTS_ACTIVITY);
         filter.addAction(AlternateRecentsComponent.ACTION_TOGGLE_RECENTS_ACTIVITY);
         filter.addAction(AlternateRecentsComponent.ACTION_START_ENTER_ANIMATION);
+        filter.addAction(AlternateRecentsComponent.ACTION_FLOATING_BUTTON_REFRESH);
         registerReceiver(mServiceBroadcastReceiver, filter);
 
         // Register any broadcast receivers for the task loader
@@ -548,7 +551,35 @@ public class RecentsActivity extends Activity implements RecentsView.RecentsView
 
         // Animate the SystemUI scrim views
         mScrimViews.startEnterRecentsAnimation();
-        mRecentsView.startFABanimation();
+        setFloatingActionButtonVisibility(true);
+    }
+
+    private void setFloatingActionButtonVisibility(boolean isFirst) {
+        boolean showClearAllRecents = Settings.System.getInt(getContentResolver(),
+                Settings.System.SHOW_CLEAR_ALL_RECENTS, 1) == 1;
+        if (!showClearAllRecents) {
+            return;
+        }
+        TaskStack stack = AlternateRecentsComponent.getGolbalStack();
+        if (stack != null) {
+            ArrayList<Task> tasks = new ArrayList<Task>();
+            tasks.addAll(stack.getTasks());
+            // Ignore the visible foreground task
+            if (AlternateRecentsComponent.ignoredForeground(this) && tasks.size() > 1) {
+                Task foregroundTask = tasks.get(tasks.size() - 1);
+                tasks.remove(foregroundTask);
+            }
+            if (TaskStackView.getUnLockedTaskCount(tasks) != 0) {
+                findViewById(R.id.floating_action_button).setVisibility(View.VISIBLE);
+                mRecentsView.startFABanimation();
+            } else {
+                if (isFirst) {
+                    findViewById(R.id.floating_action_button).setVisibility(View.GONE);
+                } else {
+                    mRecentsView.endFABanimation();
+                }
+            }
+        }
     }
 
     @Override

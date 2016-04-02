@@ -39,6 +39,7 @@ import android.widget.FrameLayout;
 import android.widget.PopupMenu;
 
 import com.android.systemui.R;
+import com.android.systemui.recents.AlternateRecentsComponent;
 import com.android.systemui.recents.Constants;
 import com.android.systemui.recents.RecentsConfiguration;
 import com.android.systemui.recents.misc.DozeTrigger;
@@ -542,24 +543,19 @@ public class TaskStackView extends FrameLayout implements TaskStack.TaskStackCal
         tv.dismissTask(0L);
     }
 
-    private boolean dismissAll() {
-        return Settings.System.getInt(mContext.getContentResolver(),
-            Settings.System.RECENTS_CLEAR_ALL_DISMISS_ALL, 1) == 1;
+    /** Resets the focused task. */
+    void resetFocusedTask() {
+        if ((0 <= mFocusedTaskIndex) && (mFocusedTaskIndex < mStack.getTaskCount())) {
+            Task t = mStack.getTasks().get(mFocusedTaskIndex);
+            TaskView tv = getChildViewForTask(t);
+            if (tv != null) {
+                tv.unsetFocusedTask();
+            }
+        }
+        mFocusedTaskIndex = -1;
     }
 
-    /** Resets the focused task. */
-     void resetFocusedTask() {
-         if ((0 <= mFocusedTaskIndex) && (mFocusedTaskIndex < mStack.getTaskCount())) {
-             Task t = mStack.getTasks().get(mFocusedTaskIndex);
-             TaskView tv = getChildViewForTask(t);
-             if (tv != null) {
-                 tv.unsetFocusedTask();
-             }
-         }
-         mFocusedTaskIndex = -1;
-     }
- 
-    public int getUnLockedTaskCount(ArrayList<Task> tasks) {
+    public static int getUnLockedTaskCount(ArrayList<Task> tasks) {
         int count = 0;
         for (int i = 0; i < tasks.size(); i++) {
             if (!tasks.get(i).isLockedApp) {
@@ -570,54 +566,59 @@ public class TaskStackView extends FrameLayout implements TaskStack.TaskStackCal
     }
 
     public void dismissAllTasks() {
-        post(new Runnable() {
+        final ArrayList<Task> tasks = new ArrayList<Task>();
+        tasks.addAll(mStack.getTasks());
+        String tmpForegroundTaskPackageName = "";
+        // Ignore the visible foreground task
+        if (AlternateRecentsComponent.ignoredForeground(getContext()) && tasks.size() > 1) {
+            Task foregroundTask = tasks.get(tasks.size() - 1);
+            tasks.remove(foregroundTask);
+            tmpForegroundTaskPackageName = foregroundTask.pkgName;
+        }
+        final String foregroundTaskPackageName = tmpForegroundTaskPackageName;
+
+        // Remove visible TaskViews
+        if (tasks.size() > 0) {
+            long dismissDelay = 0;
+            int childCount = getChildCount();
+            if (childCount > 0) {
+                if (AlternateRecentsComponent.ignoredForeground(getContext()) && childCount > 1) childCount--;
+                int unlockedCount = getUnLockedTaskCount(tasks);
+                int delay = unlockedCount != 0 ? mConfig.taskViewRemoveAnimDuration / unlockedCount : 0;
+                for (int i = 0; i < childCount; i++) {
+                    TaskView tv = (TaskView) getChildAt(i);
+                    if (!tv.getTask().isLockedApp) {
+                        tasks.remove(tv.getTask());
+                        tv.dismissTask(dismissDelay);
+                        dismissDelay += delay;
+                    }
+                }
+            }
+        }
+
+        final int size = tasks.size();
+        if (size > 0) {
+            // Remove any unlocked Tasks
+            for (Task t : tasks) {
+                if (mStack.getTasks().contains(t) && !t.isLockedApp) {
+                    mStack.removeTask(t);
+                }
+            }
+        }
+
+        // removeAllUserTask() can take upwards of two seconds to execute so post
+        // a delayed runnable to run this code once we are done animating
+        postDelayed(new Runnable() {
             @Override
             public void run() {
-                ArrayList<Task> tasks = new ArrayList<Task>();
-                tasks.addAll(mStack.getTasks());
-                // Ignore the visible foreground task
-                if (dismissAll() && tasks.size() > 1) {
-                    Task foregroundTask = tasks.get(tasks.size() - 1);
-                    tasks.remove(foregroundTask);
-                }
-
-                // Remove visible TaskViews
-                if (tasks.size() > 0) {
-                    long dismissDelay = 0;
-                    int childCount = getChildCount();
-                    if (dismissAll() && childCount > 1) childCount--;
-                    int unlockedCount = getUnLockedTaskCount(tasks);
-                    int delay = unlockedCount != 0 ? mConfig.taskViewRemoveAnimDuration / unlockedCount : 0;
-                    for (int i = 0; i < childCount; i++) {
-                        TaskView tv = (TaskView) getChildAt(i);
-                        if(!tv.getTask().isLockedApp) {
-                            tasks.remove(tv.getTask());
-                            tv.dismissTask(dismissDelay);
-                            dismissDelay += delay;
-                        }
-                    }
-                }
-
-                int size = tasks.size();
-                if (size > 0) {
-                    // Remove possible alive Tasks
-                    for (int i = 0; i < size; i++) {
-                        Task t = tasks.get(i);
-                        if (mStack.getTasks().contains(t) && !t.isLockedApp) {
-                            mStack.removeTask(t);
-                        }
-                    }
-                }
-
                 // And remove all the excluded or all the other tasks
                 SystemServicesProxy ssp = RecentsTaskLoader.getInstance().getSystemServicesProxy();
                 if (size > 0) {
-                    ssp.removeAllUserTask(UserHandle.myUserId());
+                    ssp.removeAllUserTask(UserHandle.myUserId(), foregroundTaskPackageName);
                 }
             }
-        });
+        }, mConfig.taskViewRemoveAnimDuration);
     }
-
 
     @Override
     public void onInitializeAccessibilityEvent(AccessibilityEvent event) {
@@ -1275,6 +1276,8 @@ public class TaskStackView extends FrameLayout implements TaskStack.TaskStackCal
                 }
             }
         }
+        Intent intent = AlternateRecentsComponent.createLocalBroadcastIntent(mContext, AlternateRecentsComponent.ACTION_FLOATING_BUTTON_REFRESH);
+        mContext.sendBroadcastAsUser(intent, UserHandle.CURRENT);
     }
 
     @Override

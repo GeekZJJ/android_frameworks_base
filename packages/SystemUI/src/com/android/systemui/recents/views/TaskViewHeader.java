@@ -23,6 +23,7 @@ import android.animation.ArgbEvaluator;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.graphics.Canvas;
@@ -36,6 +37,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
+import android.os.UserHandle;
 import android.provider.Settings;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
@@ -44,13 +46,14 @@ import android.view.ViewOutlineProvider;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
+
 import com.android.systemui.R;
+import com.android.systemui.recents.AlternateRecentsComponent;
 import com.android.systemui.recents.Constants;
 import com.android.systemui.recents.RecentsConfiguration;
 import com.android.systemui.recents.misc.Utilities;
 import com.android.systemui.recents.model.Task;
 import com.android.systemui.utils.LockAppUtils;
-
 
 /* The task bar view */
 public class TaskViewHeader extends FrameLayout {
@@ -111,7 +114,6 @@ public class TaskViewHeader extends FrameLayout {
 
         this.ct = context;
         lockAppUtils = new LockAppUtils(context);
-
         // Load the dismiss resources
         Resources res = context.getResources();
         mLightDismissDrawable = res.getDrawable(R.drawable.recents_dismiss_light);
@@ -164,8 +166,8 @@ public class TaskViewHeader extends FrameLayout {
         setBackground(mBackground);
     }
 
-    private void refreshBackground(boolean is_color_light, boolean iswhite) {
-        mLockAppButton.setImageDrawable(ct.getDrawable((iswhite ? (is_color_light ? R.drawable.ic_lock_light : R.drawable.ic_lock_dark) 
+    private void refreshBackground(boolean is_color_light, boolean is_locked) {
+        mLockAppButton.setImageDrawable(ct.getDrawable((is_locked ? (is_color_light ? R.drawable.ic_lock_light : R.drawable.ic_lock_dark) 
             : (is_color_light ? R.drawable.ic_lock_open_light : R.drawable.ic_lock_open_dark))));
     }
 
@@ -209,7 +211,6 @@ public class TaskViewHeader extends FrameLayout {
 
         lockAppUtils.refreshLockAppMap();
         t.isLockedApp = lockAppUtils.isLockedApp(t.pkgName) ;
- 
         if (t.activityIcon != null) {
             mApplicationIcon.setImageDrawable(t.activityIcon);
         } else if (t.applicationIcon != null) {
@@ -220,11 +221,10 @@ public class TaskViewHeader extends FrameLayout {
             mActivityDescription.setText(t.activityLabel);
         }
         task = t;
-        refreshBackground(t.useLightOnPrimaryColor,t.isLockedApp);
+        refreshBackground(t.useLightOnPrimaryColor, t.isLockedApp);
         mLockAppButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 lockAppUtils.refreshLockAppMap();
                 if (t.isLockedApp) {
                     lockAppUtils.removeApp(t.pkgName);
@@ -234,7 +234,9 @@ public class TaskViewHeader extends FrameLayout {
                     mDismissButton.setVisibility(View.GONE);
                 }
                 t.isLockedApp = !t.isLockedApp;
-                refreshBackground(t.useLightOnPrimaryColor,t.isLockedApp);
+                refreshBackground(t.useLightOnPrimaryColor, t.isLockedApp);
+                Intent intent = AlternateRecentsComponent.createLocalBroadcastIntent(mContext, AlternateRecentsComponent.ACTION_FLOATING_BUTTON_REFRESH);
+                mContext.sendBroadcastAsUser(intent, UserHandle.CURRENT);
             }
         });
         // Try and apply the system ui tint
@@ -275,7 +277,6 @@ public class TaskViewHeader extends FrameLayout {
                     .start();
         }
 
-
         if (mLockAppButton.getVisibility() == View.VISIBLE) {
             mLockAppButton.animate().cancel();
             mLockAppButton.animate()
@@ -286,7 +287,6 @@ public class TaskViewHeader extends FrameLayout {
                     .withLayer()
                     .start();
         }
-
     }
 
     /** Animates this task bar if the user does not interact with the stack after a certain time. */
@@ -314,9 +314,7 @@ public class TaskViewHeader extends FrameLayout {
                     .withLayer()
                     .start();
         }
-
     }
-
 
     /** Mark this task view that the user does has not interacted with the stack after a certain time. */
     void setNoUserInteractionState() {
