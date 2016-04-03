@@ -3386,12 +3386,6 @@ public final class Settings {
         public static final String RECENTS_CLEAR_ALL_IGNORED_FOREGROUND = "recents_clear_all_ignored_foreground";
 
         /**
-         * Use Cloud Phone Number Location Engine
-         */
-        public static final String ENABLE_CLOUD_LOCATION_LOOKUP = "enable_cloud_location_lookup";
-
-
-        /**
          * show clear all recents button
          * @hide
          */
