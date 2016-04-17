@@ -3411,6 +3411,13 @@ public final class Settings {
         public static final String BATTERY_SAVER_MODE_COLOR = "battery_save_mode_color";
 
         /**
+         * Toast icon
+         *
+         * @hide
+         */
+        public static final String TOAST_ICON = "toast_icon";
+
+        /**
          * I am the lolrus.
          * <p>
          * Nonzero values indicate that the user has a bukkit.

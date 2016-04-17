@@ -35,6 +35,8 @@ import android.view.View;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityManager;
+import android.provider.Settings;
+import android.provider.Settings.Global;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -403,13 +405,16 @@ public class Toast {
                 }
 
                 ImageView appIcon = (ImageView) mView.findViewById(android.R.id.icon);
-                if (appIcon != null) {
-                    PackageManager pm = context.getPackageManager();
-                    try {
-                        Drawable icon = pm.getApplicationIcon(packageName);
+                if ((Settings.System.getInt(context.getContentResolver(), Settings.System.TOAST_ICON, 1) == 1)) {
+                    if (appIcon != null) {
+                        PackageManager pm = context.getPackageManager();
+                        Drawable icon = null;
+                        try {
+                            icon = pm.getApplicationIcon(packageName);
+                        } catch (PackageManager.NameNotFoundException e) {
+                            // nothing to do
+                        }
                         appIcon.setImageDrawable(icon);
-                    } catch (PackageManager.NameNotFoundException e) {
-                        // Empty
                     }
                 }
                 mWM = (WindowManager)context.getSystemService(Context.WINDOW_SERVICE);
