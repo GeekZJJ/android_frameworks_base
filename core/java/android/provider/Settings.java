@@ -3404,6 +3404,13 @@ public final class Settings {
         public static final String SHOW_SU_ICON = "show_su_icon";
 
         /**
+         * Whether to enable status and navigation bar color in battery saver mode.
+         *
+         * @hide
+         */
+        public static final String BATTERY_SAVER_MODE_COLOR = "battery_save_mode_color";
+
+        /**
          * I am the lolrus.
          * <p>
          * Nonzero values indicate that the user has a bukkit.
